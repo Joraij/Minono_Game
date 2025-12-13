@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Gaming Companion Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1f2937; color: #f3f4f6; }
+        .control-card { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); height: 100%; } 
+        .game-button {
+            transition: all 0.1s ease;
+            box-shadow: 0 4px #4b5563; /* Shadow for 3D effect */
+            transform: translateY(0);
+        }
+        .game-button:active {
+            box-shadow: 0 0 #4b5563;
+            transform: translateY(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+
+    <div class="max-w-xl mx-auto">
+        <h1 class="text-3xl font-extrabold text-white mb-6 text-center">
+            🎮 Remote Gaming Companion
+        </h1>
+        <p id="connection-status" class="text-center font-medium mb-8 p-3 rounded-xl transition duration-300 bg-red-800 text-red-200">
+            Status: Disconnected.
+        </p>
+
+        <div class="grid grid-cols-2 gap-8">
+            
+            <div class="col-span-1">
+                <div class="control-card bg-gray-800 p-6 rounded-xl border-t-4 border-blue-500 flex flex-col justify-between">
+                    <h2 class="text-xl font-semibold text-gray-200 mb-4 text-center">Direction</h2>
+    
+                    <div class="flex flex-col items-center space-y-4">
+                        <button 
+                            ontouchstart="publishDirection(1)" 
+                            onmousedown="publishDirection(1)" 
+                            ontouchend="publishDirection(0)" 
+                            onmouseup="publishDirection(0)"
+                            class="game-button w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg text-2xl"
+                        >
+                            FORWARD
+                        </button>
+    
+                        <div class="text-gray-400">Release/Neutral</div>
+    
+                        <button 
+                            ontouchstart="publishDirection(-1)" 
+                            onmousedown="publishDirection(-1)" 
+                            ontouchend="publishDirection(0)" 
+                            onmouseup="publishDirection(0)"
+                            class="game-button w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg text-2xl"
+                        >
+                            BACKWARD
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-1">
+                <div class="control-card bg-gray-800 p-6 rounded-xl border-t-4 border-yellow-500 flex flex-col justify-center">
+                    <h2 class="text-xl font-semibold text-gray-200 mb-4 text-center">Action</h2>
+
+                    <div class="flex-grow flex items-center justify-center py-4">
+                        <button 
+                            ontouchstart="publishAction(1)" 
+                            onmousedown="publishAction(1)"
+                            class="game-button w-full h-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-extrabold py-10 rounded-lg text-3xl flex items-center justify-center"
+                            style="min-height: 120px;"
+                        >
+                            JUMP!
+                        </button>
+                        </div>
+                    
+                    <p class="text-center text-sm text-gray-400 mt-2">
+                        Note: Sends a single "Click" command immediately on press.
+                    </p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+
+    <script>
+        // --- MQTT CONFIGURATION ---
+        const HOST = 'test.mosquitto.org';
+        const PORT = 8081; 
+        const CLIENT_ID = 'web_game_' + parseInt(Math.random() * 100000);
+        
+        // --- TOPICS (MUST MATCH C++ CODE) ---
+        const TOPIC_DIRECTION_CONTROL = "device/joraj/game/direction";
+        const TOPIC_ACTION_CLICK = "device/joraj/game/jump";
+        
+        let client = null;
+        const statusElement = document.getElementById('connection-status');
+
+        // --- CORE FUNCTIONS (Connect, Publish) ---
+        function connectMQTT() {
+            client = new Paho.MQTT.Client(HOST, PORT, CLIENT_ID);
+            client.onConnectionLost = onConnectionLost;
+            client.onMessageArrived = onMessageArrived; 
+
+            const options = {
+                timeout: 3,
+                useSSL: true, 
+                onSuccess: onConnect,
+                onFailure: onFailure
+            };
+
+            statusElement.textContent = "Status: Connecting...";
+            statusElement.className = "text-center font-medium mb-8 p-3 rounded-xl transition duration-300 bg-yellow-600 text-gray-900";
+            client.connect(options);
+        }
+
+        function onConnect() {
+            console.log("MQTT Connected successfully!");
+            statusElement.textContent = "Status: Connected to Broker!";
+            statusElement.className = "text-center font-medium mb-8 p-3 rounded-xl transition duration-300 bg-green-600 text-white";
+        }
+
+        function onFailure(responseObject) {
+            console.error("Connection failed: " + responseObject.errorMessage);
+            statusElement.textContent = "Status: Connection FAILED. Try refreshing.";
+            statusElement.className = "text-center font-medium mb-8 p-3 rounded-xl transition duration-300 bg-red-800 text-red-200";
+        }
+
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.warn("Connection lost: " + responseObject.errorMessage);
+                statusElement.textContent = "Status: Connection Lost. Attempting reconnect...";
+                statusElement.className = "text-center font-medium mb-8 p-3 rounded-xl transition duration-300 bg-red-700 text-white";
+                setTimeout(connectMQTT, 4000); 
+            }
+        }
+        
+        function onMessageArrived(message) {
+            console.log("Message Arrived: " + message.payloadString + " on topic " + message.destinationName);
+        }
+
+        function publishCommand(topic, payload) {
+            if (!client || !client.isConnected()) {
+                console.error("MQTT not connected. Cannot send command.");
+                statusElement.textContent = "Status: Not Connected! Cannot send.";
+                return;
+            }
+            try {
+                const message = new Paho.MQTT.Message(String(payload));
+                message.destinationName = topic;
+                client.send(message);
+                console.log(`Published to ${topic}: ${payload}`);
+            } catch (e) {
+                console.error("Publish error:", e);
+            }
+        }
+
+        // --- CONTROL LOGIC ---
+
+        function publishDirection(value) {
+            // Values: 1 (Forward), 0 (Stop), -1 (Backward)
+            publishCommand(TOPIC_DIRECTION_CONTROL, value);
+        }
+
+        function publishAction(value) {
+            // Send command 1 immediately on press.
+            publishCommand(TOPIC_ACTION_CLICK, value);
+        }
+
+        // --- START CONNECTION ON LOAD ---
+        window.onload = connectMQTT;
+    </script>
+</body>
+</html>
