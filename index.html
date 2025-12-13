@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Esho Mesho Gaming</title>
+    <title>Remote Gaming Companion Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #1f2937; color: #f3f4f6; }
@@ -12,6 +12,10 @@
             transition: all 0.1s ease;
             box-shadow: 0 4px #4b5563; /* Shadow for 3D effect */
             transform: translateY(0);
+            /* Prevent text selection on click */
+            user-select: none; 
+            -webkit-user-select: none;
+            -moz-user-select: none;
         }
         .game-button:active {
             box-shadow: 0 0 #4b5563;
@@ -35,29 +39,34 @@
                 <div class="control-card bg-gray-800 p-6 rounded-xl border-t-4 border-blue-500 flex flex-col justify-between">
                     <h2 class="text-xl font-semibold text-gray-200 mb-4 text-center">Direction</h2>
     
-                    <div class="flex flex-col items-center space-y-4">
-                        <button 
-                            ontouchstart="publishDirection(1)" 
-                            onmousedown="publishDirection(1)" 
-                            ontouchend="publishDirection(0)" 
-                            onmouseup="publishDirection(0)"
-                            class="game-button w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg text-2xl"
-                        >
-                            
-                        </button>
-    
-                        <div class="text-gray-400">Release/Neutral</div>
-    
+                    <div class="flex justify-center space-x-4 py-8">
+                        
                         <button 
                             ontouchstart="publishDirection(-1)" 
                             onmousedown="publishDirection(-1)" 
                             ontouchend="publishDirection(0)" 
                             onmouseup="publishDirection(0)"
-                            class="game-button w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-lg text-2xl"
+                            class="game-button w-24 h-24 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full text-4xl flex items-center justify-center"
                         >
-                            
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                            </svg>
                         </button>
+
+                        <button 
+                            ontouchstart="publishDirection(1)" 
+                            onmousedown="publishDirection(1)" 
+                            ontouchend="publishDirection(0)" 
+                            onmouseup="publishDirection(0)"
+                            class="game-button w-24 h-24 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full text-4xl flex items-center justify-center"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                            </svg>
+                        </button>
+
                     </div>
+                    <p class="text-center text-sm text-gray-400">Hold Left/Right to press the keys.</p>
                 </div>
             </div>
 
@@ -69,15 +78,17 @@
                         <button 
                             ontouchstart="publishAction(1)" 
                             onmousedown="publishAction(1)"
-                            class="game-button w-full h-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-extrabold py-10 rounded-lg text-3xl flex items-center justify-center"
+                            class="game-button w-full h-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-extrabold rounded-lg text-3xl flex items-center justify-center"
                             style="min-height: 120px;"
                         >
-                            
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                            </svg>
                         </button>
                         </div>
                     
                     <p class="text-center text-sm text-gray-400 mt-2">
-                        Note: Sends a single "Click" command immediately on press.
+                        Note: Taps the key once on press.
                     </p>
                 </div>
             </div>
@@ -100,7 +111,8 @@
         let client = null;
         const statusElement = document.getElementById('connection-status');
 
-        // --- CORE FUNCTIONS (Connect, Publish) ---
+        // [ ... Core Functions (connectMQTT, onConnect, onFailure, etc.) remain the same ... ]
+
         function connectMQTT() {
             client = new Paho.MQTT.Client(HOST, PORT, CLIENT_ID);
             client.onConnectionLost = onConnectionLost;
@@ -175,5 +187,4 @@
         window.onload = connectMQTT;
     </script>
 </body>
-
 </html>
