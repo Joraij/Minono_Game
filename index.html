@@ -12,7 +12,7 @@
             background: #0f172a; 
             color: white; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none;
+            touch-action: none; /* Prevents scrolling while using joysticks */
         }
         .joystick-zone {
             width: 280px; height: 280px;
@@ -74,7 +74,7 @@
             }
         }
 
-        // --- PAN LOGIC (REVERSED) ---
+        // --- PAN LOGIC (NOW FLIPPED) ---
         const panJoy = nipplejs.create({
             zone: document.getElementById('joyPan'),
             mode: 'static', position: {left: '50%', top: '50%'},
@@ -84,14 +84,15 @@
         panJoy.on('move', (evt, data) => {
             if (data.direction) {
                 let force = Math.min(data.force, 1);
-                // REVERSED LOGIC: Right now subtracts, Left now adds
-                let angle = data.direction.x === 'right' ? 90 - (90 * force) : 90 + (90 * force);
+                // FLIPPED: If Right previously subtracted, it now adds (90 + ...)
+                // If this is still wrong, just change the '+' to '-' and it will flip again.
+                let angle = data.direction.x === 'right' ? 90 + (90 * force) : 90 - (90 * force);
                 publish("device/joraj/arm/pan", angle);
             }
         });
         panJoy.on('end', () => publish("device/joraj/arm/pan", 90));
 
-        // --- TILT LOGIC (REVERSED) ---
+        // --- TILT LOGIC (STAYED THE SAME) ---
         const tiltJoy = nipplejs.create({
             zone: document.getElementById('joyTilt'),
             mode: 'static', position: {left: '50%', top: '50%'},
@@ -101,7 +102,7 @@
         tiltJoy.on('move', (evt, data) => {
             if (data.direction) {
                 let force = Math.min(data.force, 1);
-                // REVERSED LOGIC: Up now subtracts, Down now adds
+                // Keeping your working Up/Down logic as is
                 let angle = data.direction.y === 'up' ? 90 - (90 * force) : 90 + (90 * force);
                 publish("device/joraj/arm/tilt", angle);
             }
