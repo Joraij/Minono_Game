@@ -13,52 +13,58 @@
             color: white; 
             font-family: 'Segoe UI', sans-serif;
             touch-action: none; 
-            overflow: hidden; /* Prevent scrolling on mobile */
+            overflow: hidden; 
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
+
+        /* STRICT SIDE-BY-SIDE GRID */
+        .controller-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Exactly two equal halves */
+            width: 100%;
+            flex-grow: 1; /* Fills the remaining space below the title */
+            align-items: center;
+            justify-items: center;
+        }
+
         .joystick-zone {
-            width: 180px; height: 180px; /* Slightly smaller for better mobile fit */
-            background: rgba(255, 255, 255, 0.03);
-            border: 2px solid rgba(59, 130, 246, 0.3);
+            width: 160px; height: 160px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 3px solid rgba(59, 130, 246, 0.4);
             border-radius: 50%;
             position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.4);
         }
-        /* Forces horizontal layout even on small screens */
-        .controller-container {
-            display: flex;
-            flex-direction: row; 
-            justify-content: center;
-            align-items: center;
-            gap: 60px; /* Distance between joysticks */
-            width: 100%;
-        }
+
         @media (max-width: 600px) {
-            .joystick-zone { width: 140px; height: 140px; } /* Scale down for small phones */
-            .controller-container { gap: 30px; }
+            .joystick-zone { width: 130px; height: 130px; }
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-4">
+<body>
 
-    <div class="text-center mb-10">
-        <h1 class="text-3xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-            ARM CONTROLLER
-        </h1>
-        <div id="status" class="mt-2 px-4 py-1 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest inline-block">
-            Connecting...
+    <div class="text-center pt-6">
+        <h1 class="text-2xl font-black italic tracking-tighter text-blue-400">ARM CONTROLLER</h1>
+        <div id="status" class="mt-1 px-3 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase inline-block">
+            Offline
         </div>
+        <button onclick="toggleFullScreen()" class="block mx-auto mt-2 text-[10px] text-gray-500 underline">Toggle Fullscreen</button>
     </div>
 
-    <div class="controller-container">
+    <div class="controller-grid">
+        
         <div class="flex flex-col items-center">
-            <span class="mb-4 text-blue-400 font-bold tracking-widest text-[10px]">LEFT / RIGHT</span>
+            <span class="mb-4 text-blue-400 font-bold text-xs uppercase tracking-widest">Pan (L/R)</span>
             <div id="joyPan" class="joystick-zone"></div>
         </div>
 
         <div class="flex flex-col items-center">
-            <span class="mb-4 text-emerald-400 font-bold tracking-widest text-[10px]">UP / DOWN</span>
+            <span class="mb-4 text-emerald-400 font-bold text-xs uppercase tracking-widest">Tilt (U/D)</span>
             <div id="joyTilt" class="joystick-zone"></div>
         </div>
+
     </div>
 
     <script>
@@ -69,15 +75,13 @@
         let mqtt = new Paho.MQTT.Client(HOST, PORT, CLIENT_ID);
 
         mqtt.onConnectionLost = (err) => { 
-            const s = document.getElementById('status');
-            s.innerText = "Offline";
-            s.className = "mt-2 px-4 py-1 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest inline-block";
+            document.getElementById('status').innerText = "Offline";
+            document.getElementById('status').className = "mt-1 px-3 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase inline-block";
         };
 
         mqtt.connect({ useSSL: true, onSuccess: () => {
-            const s = document.getElementById('status');
-            s.innerText = "Online";
-            s.className = "mt-2 px-4 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest inline-block";
+            document.getElementById('status').innerText = "Online";
+            document.getElementById('status').className = "mt-1 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase inline-block";
         }});
 
         function publish(topic, val) {
@@ -88,11 +92,19 @@
             }
         }
 
-        // PAN (Left/Right) - Logic reversed as per your previous request
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+
+        // Joystick 1: Pan (Corrected Direction)
         const panJoy = nipplejs.create({
             zone: document.getElementById('joyPan'),
             mode: 'static', position: {left: '50%', top: '50%'},
-            color: '#3b82f6', size: 120, lockX: true
+            color: '#3b82f6', size: 130, lockX: true
         });
 
         panJoy.on('move', (evt, data) => {
@@ -104,11 +116,11 @@
         });
         panJoy.on('end', () => publish("device/joraj/arm/pan", 90));
 
-        // TILT (Up/Down) - Logic as per your previous request
+        // Joystick 2: Tilt (Corrected Direction)
         const tiltJoy = nipplejs.create({
             zone: document.getElementById('joyTilt'),
             mode: 'static', position: {left: '50%', top: '50%'},
-            color: '#10b981', size: 120, lockY: true
+            color: '#10b981', size: 130, lockY: true
         });
 
         tiltJoy.on('move', (evt, data) => {
