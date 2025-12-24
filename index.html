@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Robot Arm Pro Controller</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
@@ -11,38 +11,52 @@
         body { 
             background: #0f172a; 
             color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Prevents scrolling while using joysticks */
+            font-family: 'Segoe UI', sans-serif;
+            touch-action: none; 
+            overflow: hidden; /* Prevent scrolling on mobile */
         }
         .joystick-zone {
-            width: 280px; height: 280px;
+            width: 180px; height: 180px; /* Slightly smaller for better mobile fit */
             background: rgba(255, 255, 255, 0.03);
             border: 2px solid rgba(59, 130, 246, 0.3);
             border-radius: 50%;
             position: relative;
-            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            box-shadow: 0 0 30px rgba(0,0,0,0.4);
+        }
+        /* Forces horizontal layout even on small screens */
+        .controller-container {
+            display: flex;
+            flex-direction: row; 
+            justify-content: center;
+            align-items: center;
+            gap: 60px; /* Distance between joysticks */
+            width: 100%;
+        }
+        @media (max-width: 600px) {
+            .joystick-zone { width: 140px; height: 140px; } /* Scale down for small phones */
+            .controller-container { gap: 30px; }
         }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
 
-    <div class="text-center mb-8">
-        <h1 class="text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-            ROBOT ARM V2
+    <div class="text-center mb-10">
+        <h1 class="text-3xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+            ARM CONTROLLER
         </h1>
-        <div id="status" class="mt-4 px-4 py-1 rounded-full bg-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest">
+        <div id="status" class="mt-2 px-4 py-1 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest inline-block">
             Connecting...
         </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-16">
+    <div class="controller-container">
         <div class="flex flex-col items-center">
-            <span class="mb-4 text-blue-400 font-bold tracking-widest text-sm">↔ PAN (LEFT/RIGHT)</span>
+            <span class="mb-4 text-blue-400 font-bold tracking-widest text-[10px]">LEFT / RIGHT</span>
             <div id="joyPan" class="joystick-zone"></div>
         </div>
 
         <div class="flex flex-col items-center">
-            <span class="mb-4 text-emerald-400 font-bold tracking-widest text-sm">↕ TILT (UP/DOWN)</span>
+            <span class="mb-4 text-emerald-400 font-bold tracking-widest text-[10px]">UP / DOWN</span>
             <div id="joyTilt" class="joystick-zone"></div>
         </div>
     </div>
@@ -56,14 +70,14 @@
 
         mqtt.onConnectionLost = (err) => { 
             const s = document.getElementById('status');
-            s.innerText = "Connection Lost";
-            s.className = "mt-4 px-4 py-1 rounded-full bg-red-500/20 text-red-400 text-xs font-bold uppercase tracking-widest";
+            s.innerText = "Offline";
+            s.className = "mt-2 px-4 py-1 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest inline-block";
         };
 
         mqtt.connect({ useSSL: true, onSuccess: () => {
             const s = document.getElementById('status');
-            s.innerText = "System Online";
-            s.className = "mt-4 px-4 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-widest";
+            s.innerText = "Online";
+            s.className = "mt-2 px-4 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest inline-block";
         }});
 
         function publish(topic, val) {
@@ -74,35 +88,32 @@
             }
         }
 
-        // --- PAN LOGIC (NOW FLIPPED) ---
+        // PAN (Left/Right) - Logic reversed as per your previous request
         const panJoy = nipplejs.create({
             zone: document.getElementById('joyPan'),
             mode: 'static', position: {left: '50%', top: '50%'},
-            color: '#3b82f6', size: 160, lockX: true
+            color: '#3b82f6', size: 120, lockX: true
         });
 
         panJoy.on('move', (evt, data) => {
             if (data.direction) {
                 let force = Math.min(data.force, 1);
-                // FLIPPED: If Right previously subtracted, it now adds (90 + ...)
-                // If this is still wrong, just change the '+' to '-' and it will flip again.
                 let angle = data.direction.x === 'right' ? 90 + (90 * force) : 90 - (90 * force);
                 publish("device/joraj/arm/pan", angle);
             }
         });
         panJoy.on('end', () => publish("device/joraj/arm/pan", 90));
 
-        // --- TILT LOGIC (STAYED THE SAME) ---
+        // TILT (Up/Down) - Logic as per your previous request
         const tiltJoy = nipplejs.create({
             zone: document.getElementById('joyTilt'),
             mode: 'static', position: {left: '50%', top: '50%'},
-            color: '#10b981', size: 160, lockY: true
+            color: '#10b981', size: 120, lockY: true
         });
 
         tiltJoy.on('move', (evt, data) => {
             if (data.direction) {
                 let force = Math.min(data.force, 1);
-                // Keeping your working Up/Down logic as is
                 let angle = data.direction.y === 'up' ? 90 - (90 * force) : 90 + (90 * force);
                 publish("device/joraj/arm/tilt", angle);
             }
