@@ -1,2 +1,2 @@
-# Minono_Game
-Minono_Game
+# Buzz_Game
+Buzz_Game
