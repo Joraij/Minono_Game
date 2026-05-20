@@ -32,7 +32,7 @@
 
         #player-tag { position: absolute; top: 15px; left: 25px; color: #8e8e93; font-size: 14px; letter-spacing: 1px; }
 
-        /* UPGRADED: Massive Red Buzz Button */
+        /* Massive Red Buzz Button */
         .buzz-container {
             flex: 2.5; width: 100%; display: flex; justify-content: center; align-items: center; margin-top: 25px;
         }
@@ -45,11 +45,11 @@
         }
         .buzz-dome:active { background: radial-gradient(circle at 50% 30%, #ff1a0a, #800000); transform: scale(0.96); box-shadow: 0 4px 5px rgba(0,0,0,0.5); }
 
-        /* UPGRADED: Pushed buttons layout up by allocating tighter margins and padding safety at base */
+        /* Pushed buttons layout up with safety margin at the bottom */
         .color-buttons-container {
             flex: 3.5; width: 100%; display: flex; flex-direction: column; 
             justify-content: flex-start; gap: 12px; align-items: center; 
-            margin-bottom: 50px; /* Safe padding barrier to keep fingers clear of phone navigation bars */
+            margin-bottom: 50px; 
         }
         .rect-btn {
             width: 88%; height: 16%; border-radius: 15px; border: 5px solid #111;
@@ -74,8 +74,8 @@
         <select id="player-select">
             <option value="1">Player 1</option>
             <option value="2">Player 2</option>
+            <option value="3">Player 4</option>
             <option value="3">Player 3</option>
-            <option value="4">Player 4</option>
         </select>
         
         <button id="connect-btn" onclick="connectToServer()">Launch Controller</button>
@@ -103,8 +103,8 @@
         const ctrlScreen = document.getElementById('controller-screen');
         const playerTag = document.getElementById('player-tag');
 
-        // Function preventing device screen sleep
-        async def requestWakeLock() {
+        // FIXED: Changed from 'async def' to correct JavaScript 'async function'
+        async function requestWakeLock() {
             try {
                 if ('wakeLock' in navigator) {
                     wakeLock = await navigator.wakeLock.request('screen');
@@ -134,7 +134,7 @@
                     connScreen.style.display = "none";
                     ctrlScreen.style.display = "flex";
                     playerTag.innerText = "PLAYER 0" + msg.player_id;
-                    requestWakeLock(); // Request keeping screen turned on right now
+                    requestWakeLock(); 
                 } else {
                     alert("Error matching player slot: " + msg.message);
                 }
