@@ -2,135 +2,156 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Robot Arm Pro Controller</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Buzz! Controller</title>
     <style>
-        body { 
-            background: #0f172a; 
-            color: white; 
-            font-family: 'Segoe UI', sans-serif;
-            touch-action: none; 
-            overflow: hidden; 
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
+        body {
+            margin: 0; background: #000; font-family: 'Arial Black', sans-serif;
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+            touch-action: none; -webkit-user-select: none; user-select: none;
+            align-items: center; justify-content: center;
+        }
+        
+        /* Connection Setup Screen */
+        #connection-screen {
+            position: fixed; inset: 0; background: #1a1a1a; color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
+        }
+        input { padding: 15px; margin: 10px; font-size: 18px; border-radius: 8px; border: 2px solid #444; background: #333; color: white; text-align: center; }
+        #connect-btn { background: #007bff; color: white; font-weight: bold; padding: 15px 30px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer;}
+        
+        /* Realistic Controller Body */
+        #controller-screen { 
+            display: none; flex-direction: column; 
+            height: 98vh; width: 90vw; max-width: 400px;
+            background: #1c1c1e; border-radius: 50px; 
+            padding: 20px; box-sizing: border-box;
+            border: 4px solid #111; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            position: relative; align-items: center;
         }
 
-        /* STRICT SIDE-BY-SIDE GRID */
-        .controller-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr; /* Exactly two equal halves */
-            width: 100%;
-            flex-grow: 1; /* Fills the remaining space below the title */
-            align-items: center;
-            justify-items: center;
+        #player-tag { 
+            position: absolute; top: 15px; left: 25px; color: #8e8e93; font-size: 14px; letter-spacing: 1px;
         }
 
-        .joystick-zone {
-            width: 160px; height: 160px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 3px solid rgba(59, 130, 246, 0.4);
-            border-radius: 50%;
-            position: relative;
+        /* Giant Round Red Buzz Button */
+        .buzz-container {
+            flex: 2; width: 100%; display: flex; justify-content: center; align-items: center; margin-top: 20px;
+        }
+        .buzz-dome {
+            width: 150px; height: 150px; background: radial-gradient(circle at 50% 30%, #ff453a, #b30000);
+            border-radius: 50%; border: 6px solid #111;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.5), inset 0 4px 10px rgba(255,255,255,0.4);
+            display: flex; justify-content: center; align-items: center;
+            color: #700000; font-size: 24px; font-weight: 900; letter-spacing: 1px;
+        }
+        .buzz-dome:active {
+            background: radial-gradient(circle at 50% 30%, #ff1a0a, #800000);
+            transform: scale(0.97); box-shadow: 0 4px 5px rgba(0,0,0,0.5);
         }
 
-        @media (max-width: 600px) {
-            .joystick-zone { width: 130px; height: 130px; }
+        /* Rectangular Colored Buttons Layout */
+        .color-buttons-container {
+            flex: 3; width: 100%; display: flex; flex-direction: column; 
+            justify-content: space-evenly; align-items: center; margin-bottom: 20px;
         }
+        .rect-btn {
+            width: 85%; height: 14%; border-radius: 15px; border: 5px solid #111;
+            box-shadow: 0 5px 5px rgba(0,0,0,0.3), inset 0 3px 5px rgba(255,255,255,0.3);
+            transition: transform 0.05s;
+        }
+        .rect-btn:active { transform: scale(0.96); filter: brightness(0.8); }
+
+        /* Exact colors matched to your image sequence (Top to Bottom) */
+        .blue   { background: linear-gradient(#0a84ff, #0040aa); }
+        .orange { background: linear-gradient(#ff9f0a, #b36b00); }
+        .green  { background: linear-gradient(#30d158, #1a7a33); }
+        .yellow { background: linear-gradient(#ffd60a, #b39500); }
+
     </style>
 </head>
 <body>
 
-    <div class="text-center pt-6">
-        <h1 class="text-2xl font-black italic tracking-tighter text-blue-400">ARM CONTROLLER</h1>
-        <div id="status" class="mt-1 px-3 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase inline-block">
-            Offline
-        </div>
-        <button onclick="toggleFullScreen()" class="block mx-auto mt-2 text-[10px] text-gray-500 underline">Toggle Fullscreen</button>
+    <div id="connection-screen">
+        <h2 style="margin-bottom:5px;">Buzz! Wireless Link</h2>
+        <p style="color:#8e8e93; margin-top:0;">Enter your PC's IP Address</p>
+        <input type="text" id="ip-input" placeholder="192.168.1.X" value="">
+        <button id="connect-btn" onclick="connectToServer()">Connect Controller</button>
     </div>
 
-    <div class="controller-grid">
+    <div id="controller-screen">
+        <div id="player-tag">DISCONNECTED</div>
         
-        <div class="flex flex-col items-center">
-            <span class="mb-4 text-blue-400 font-bold text-xs uppercase tracking-widest">Pan (L/R)</span>
-            <div id="joyPan" class="joystick-zone"></div>
+        <div class="buzz-container">
+            <div class="btn buzz-dome" data-id="0">BUZZ</div>
         </div>
-
-        <div class="flex flex-col items-center">
-            <span class="mb-4 text-emerald-400 font-bold text-xs uppercase tracking-widest">Tilt (U/D)</span>
-            <div id="joyTilt" class="joystick-zone"></div>
+        
+        <div class="color-buttons-container">
+            <div class="btn rect-btn blue" data-id="1"></div>
+            <div class="btn rect-btn orange" data-id="2"></div>
+            <div class="btn rect-btn green" data-id="3"></div>
+            <div class="btn rect-btn yellow" data-id="4"></div>
         </div>
-
     </div>
 
     <script>
-        const HOST = 'test.mosquitto.org';
-        const PORT = 8081; 
-        const CLIENT_ID = 'web_robot_' + Math.floor(Math.random() * 1000);
-        
-        let mqtt = new Paho.MQTT.Client(HOST, PORT, CLIENT_ID);
+        let ws;
+        const connScreen = document.getElementById('connection-screen');
+        const ctrlScreen = document.getElementById('controller-screen');
+        const playerTag = document.getElementById('player-tag');
 
-        mqtt.onConnectionLost = (err) => { 
-            document.getElementById('status').innerText = "Offline";
-            document.getElementById('status').className = "mt-1 px-3 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold uppercase inline-block";
-        };
+        function connectToServer() {
+            const ip = document.getElementById('ip-input').value.trim();
+            if(!ip) { alert("Please enter an IP address"); return; }
 
-        mqtt.connect({ useSSL: true, onSuccess: () => {
-            document.getElementById('status').innerText = "Online";
-            document.getElementById('status').className = "mt-1 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase inline-block";
-        }});
+            // Attemp network connection
+            ws = new WebSocket(`ws://${ip}:8765`);
 
-        function publish(topic, val) {
-            if (mqtt.isConnected()) {
-                let msg = new Paho.MQTT.Message(String(Math.round(val)));
-                msg.destinationName = topic;
-                mqtt.send(msg);
-            }
+            ws.onopen = () => {
+                // FIXED capitalization to JSON
+                ws.send(JSON.stringify({ type: "register" }));
+            };
+
+            ws.onmessage = (event) => {
+                // FIXED capitalization to JSON
+                const msg = JSON.parse(event.data);
+                if(msg.status === "success") {
+                    connScreen.style.display = "none";
+                    ctrlScreen.style.display = "flex";
+                    playerTag.innerText = "PLAYER 0" + msg.player_id;
+                } else {
+                    alert("Lobby Full or Server Error: " + msg.message);
+                }
+            };
+
+            ws.onclose = () => {
+                connScreen.style.display = "flex";
+                ctrlScreen.style.display = "none";
+                playerTag.innerText = "DISCONNECTED";
+                alert("Lost connection to the PC Python Server.");
+            };
+
+            ws.onerror = () => {
+                alert("Could not reach Python server. Check your IP address and ensure the Python script is running on your PC.");
+            };
         }
 
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
+        // Optimized Touch Handling for Mobile Browsers
+        document.querySelectorAll('.btn').forEach(button => {
+            const sendInput = (action) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: "input",
+                        button: parseInt(button.dataset.id),
+                        action: action
+                    }));
+                }
+            };
 
-        // Joystick 1: Pan (Corrected Direction)
-        const panJoy = nipplejs.create({
-            zone: document.getElementById('joyPan'),
-            mode: 'static', position: {left: '50%', top: '50%'},
-            color: '#3b82f6', size: 130, lockX: true
+            // Using touch events avoids the 300ms click delay on mobile browsers
+            button.addEventListener('touchstart', (e) => { e.preventDefault(); sendInput('press'); });
+            button.addEventListener('touchend', (e) => { e.preventDefault(); sendInput('release'); });
         });
-
-        panJoy.on('move', (evt, data) => {
-            if (data.direction) {
-                let force = Math.min(data.force, 1);
-                let angle = data.direction.x === 'right' ? 90 + (90 * force) : 90 - (90 * force);
-                publish("device/joraj/arm/pan", angle);
-            }
-        });
-        panJoy.on('end', () => publish("device/joraj/arm/pan", 90));
-
-        // Joystick 2: Tilt (Corrected Direction)
-        const tiltJoy = nipplejs.create({
-            zone: document.getElementById('joyTilt'),
-            mode: 'static', position: {left: '50%', top: '50%'},
-            color: '#10b981', size: 130, lockY: true
-        });
-
-        tiltJoy.on('move', (evt, data) => {
-            if (data.direction) {
-                let force = Math.min(data.force, 1);
-                let angle = data.direction.y === 'up' ? 90 - (90 * force) : 90 + (90 * force);
-                publish("device/joraj/arm/tilt", angle);
-            }
-        });
-        tiltJoy.on('end', () => publish("device/joraj/arm/tilt", 90));
     </script>
 </body>
 </html>
