@@ -75,7 +75,7 @@
             <div class="btn rect-btn blue" data-id="1"></div>
             <div class="btn rect-btn orange" data-id="2"></div>
             <div class="btn rect-btn green" data-id="3"></div>
-            <div class="btn rect-btn yellow" data-id="4"></div>
+            . <div class="btn rect-btn yellow" data-id="4"></div>
         </div>
     </div>
 
@@ -109,7 +109,7 @@
 
             ws.onmessage = (event) => {
                 const msg = JSON.parse(event.data);
-                if(msg.status === "success") {
+                if (msg.status === "success") {
                     connScreen.style.display = "none";
                     ctrlScreen.style.display = "flex";
                     playerTag.innerText = "PLAYER 0" + msg.player_id;
