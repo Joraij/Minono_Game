@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Buzz! Controller Pro</title>
+    <title>Buzz! Controller Local Pro</title>
     <style>
         body {
             margin: 0; background: #000; font-family: 'Arial Black', sans-serif;
@@ -17,7 +17,6 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
         }
         input, select { padding: 15px; margin: 8px; font-size: 16px; border-radius: 8px; border: 2px solid #444; background: #333; color: white; text-align: center; width: 240px;}
-        .divider { margin: 10px 0; color: #666; font-size: 14px; position: relative;}
         #connect-btn { background: #30d158; color: white; font-weight: bold; padding: 15px 30px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; margin-top: 15px; width: 240px;}
         
         #controller-screen { 
@@ -55,15 +54,11 @@
 
     <div id="connection-screen">
         <h2 style="margin-bottom:5px;">Buzz! Wireless Link</h2>
-        <p style="color:#8e8e93; margin-top:0;">Connect via Local Network or Passkey</p>
+        <p style="color:#8e8e93; margin-top:0;">Connect via Local Network</p>
         
-        <input type="text" id="ip-input" placeholder="Option A: Local PC IP Address">
+        <input type="text" id="ip-input" placeholder="Enter PC IP (e.g. 192.168.1.5)">
         
-        <div class="divider">— OR —</div>
-        
-        <input type="text" id="passkey-input" placeholder="Option B: Enter 6-Char Passkey" maxlength="8" style="text-transform: uppercase;">
-        
-        <select id="player-select" style="margin-top: 15px;">
+        <select id="player-select">
             <option value="1">Player 1</option>
             <option value="2">Player 2</option>
             <option value="3">Player 3</option>
@@ -97,37 +92,12 @@
             } catch (err) { console.log("WakeLock inactive:", err.message); }
         }
 
-        function decodePasskey(hex) {
-            try {
-                // Formats Hex string chunks back into an IP format string
-                let cleanHex = hex.trim().toUpperCase();
-                let blocks = [];
-                for (let i = 0; i < cleanHex.length; i += 2) {
-                    blocks.push(parseInt(cleanHex.substr(i, 2), 16));
-                }
-                return blocks.join('.');
-            } catch(e) {
-                return null;
-            }
-        }
-
         function connectToServer() {
-            const localIp = document.getElementById('ip-input').value.trim();
-            const passkey = document.getElementById('passkey-input').value.trim();
+            const targetIp = document.getElementById('ip-input').value.trim();
             const selectedPlayer = document.getElementById('player-select').value;
             
-            let targetIp = "";
-
-            if (passkey) {
-                targetIp = decodePasskey(passkey);
-                if (!targetIp || targetIp.includes("NaN")) {
-                    alert("Invalid Passkey format.");
-                    return;
-                }
-            } else if (localIp) {
-                targetIp = localIp;
-            } else {
-                alert("Please fill in either the Local IP or an Online Passkey.");
+            if (!targetIp) {
+                alert("Please provide the Local PC IP address.");
                 return;
             }
 
@@ -157,7 +127,7 @@
             };
             
             ws.onerror = () => {
-                alert("Connection failed. If using a passkey, ensure the host has configured Port Forwarding on port 8765.");
+                alert("Connection failed. Ensure the Python Dashboard application is running on your PC and your phone is on the same Wi-Fi network.");
             };
         }
 
