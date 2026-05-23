@@ -12,15 +12,14 @@
             align-items: center; justify-content: center;
         }
         
-        /* Connection Screen Adjustment */
         #connection-screen {
             position: fixed; inset: 0; background: #1a1a1a; color: white;
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
         }
-        input, select { padding: 15px; margin: 8px; font-size: 18px; border-radius: 8px; border: 2px solid #444; background: #333; color: white; text-align: center; width: 220px;}
-        #connect-btn { background: #30d158; color: white; font-weight: bold; padding: 15px 30px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; margin-top: 15px;}
+        input, select { padding: 15px; margin: 8px; font-size: 16px; border-radius: 8px; border: 2px solid #444; background: #333; color: white; text-align: center; width: 240px;}
+        .divider { margin: 10px 0; color: #666; font-size: 14px; position: relative;}
+        #connect-btn { background: #30d158; color: white; font-weight: bold; padding: 15px 30px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; margin-top: 15px; width: 240px;}
         
-        /* Controller Frame */
         #controller-screen { 
             display: none; flex-direction: column; 
             height: 98vh; width: 92vw; max-width: 420px;
@@ -32,10 +31,7 @@
 
         #player-tag { position: absolute; top: 15px; left: 25px; color: #8e8e93; font-size: 14px; letter-spacing: 1px; }
 
-        /* Massive Red Buzz Button */
-        .buzz-container {
-            flex: 2.5; width: 100%; display: flex; justify-content: center; align-items: center; margin-top: 25px;
-        }
+        .buzz-container { flex: 2.5; width: 100%; display: flex; justify-content: center; align-items: center; margin-top: 25px; }
         .buzz-dome {
             width: 180px; height: 180px; background: radial-gradient(circle at 50% 30%, #ff453a, #b30000);
             border-radius: 50%; border: 6px solid #111;
@@ -45,33 +41,29 @@
         }
         .buzz-dome:active { background: radial-gradient(circle at 50% 30%, #ff1a0a, #800000); transform: scale(0.96); box-shadow: 0 4px 5px rgba(0,0,0,0.5); }
 
-        /* Pushed buttons layout up with safety margin at the bottom */
-        .color-buttons-container {
-            flex: 3.5; width: 100%; display: flex; flex-direction: column; 
-            justify-content: flex-start; gap: 12px; align-items: center; 
-            margin-bottom: 50px; 
-        }
-        .rect-btn {
-            width: 88%; height: 16%; border-radius: 15px; border: 5px solid #111;
-            box-shadow: 0 5px 5px rgba(0,0,0,0.3), inset 0 3px 5px rgba(255,255,255,0.3);
-        }
+        .color-buttons-container { flex: 3.5; width: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px; align-items: center; margin-bottom: 50px; }
+        .rect-btn { width: 88%; height: 16%; border-radius: 15px; border: 5px solid #111; box-shadow: 0 5px 5px rgba(0,0,0,0.3), inset 0 3px 5px rgba(255,255,255,0.3); }
         .rect-btn:active { transform: scale(0.96); filter: brightness(0.8); }
 
         .blue   { background: linear-gradient(#0a84ff, #0040aa); }
-        .orange { background: linear-gradient(#ff7a0d, #da6d00); }
+        .orange { background: linear-gradient(#ff9f0a, #b36b00); }
         .green  { background: linear-gradient(#30d158, #1a7a33); }
-        .yellow { background: linear-gradient(#ffd60a, #c6a500); }
+        .yellow { background: linear-gradient(#ffd60a, #b39500); }
     </style>
 </head>
 <body>
 
     <div id="connection-screen">
         <h2 style="margin-bottom:5px;">Buzz! Wireless Link</h2>
-        <p style="color:#8e8e93; margin-top:0;">Configure Device Assignment</p>
+        <p style="color:#8e8e93; margin-top:0;">Connect via Local Network or Passkey</p>
         
-        <input type="text" id="ip-input" placeholder="Enter PC IP (e.g. 192.168.1.5)">
+        <input type="text" id="ip-input" placeholder="Option A: Local PC IP Address">
         
-        <select id="player-select">
+        <div class="divider">— OR —</div>
+        
+        <input type="text" id="passkey-input" placeholder="Option B: Enter 6-Char Passkey" maxlength="8" style="text-transform: uppercase;">
+        
+        <select id="player-select" style="margin-top: 15px;">
             <option value="1">Player 1</option>
             <option value="2">Player 2</option>
             <option value="3">Player 3</option>
@@ -83,11 +75,7 @@
 
     <div id="controller-screen">
         <div id="player-tag">DISCONNECTED</div>
-        
-        <div class="buzz-container">
-            <div class="btn buzz-dome" data-id="0">BUZZ</div>
-        </div>
-        
+        <div class="buzz-container"><div class="btn buzz-dome" data-id="0">BUZZ</div></div>
         <div class="color-buttons-container">
             <div class="btn rect-btn blue" data-id="1"></div>
             <div class="btn rect-btn orange" data-id="2"></div>
@@ -103,29 +91,50 @@
         const ctrlScreen = document.getElementById('controller-screen');
         const playerTag = document.getElementById('player-tag');
 
-        // FIXED: Changed from 'async def' to correct JavaScript 'async function'
         async function requestWakeLock() {
             try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
+                if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
+            } catch (err) { console.log("WakeLock inactive:", err.message); }
+        }
+
+        function decodePasskey(hex) {
+            try {
+                // Formats Hex string chunks back into an IP format string
+                let cleanHex = hex.trim().toUpperCase();
+                let blocks = [];
+                for (let i = 0; i < cleanHex.length; i += 2) {
+                    blocks.push(parseInt(cleanHex.substr(i, 2), 16));
                 }
-            } catch (err) {
-                console.log("WakeLock keeping display alive rejected:", err.message);
+                return blocks.join('.');
+            } catch(e) {
+                return null;
             }
         }
 
         function connectToServer() {
-            const ip = document.getElementById('ip-input').value.trim();
+            const localIp = document.getElementById('ip-input').value.trim();
+            const passkey = document.getElementById('passkey-input').value.trim();
             const selectedPlayer = document.getElementById('player-select').value;
-            if(!ip) { alert("Please provide valid IP target"); return; }
+            
+            let targetIp = "";
 
-            ws = new WebSocket(`ws://${ip}:8765`);
+            if (passkey) {
+                targetIp = decodePasskey(passkey);
+                if (!targetIp || targetIp.includes("NaN")) {
+                    alert("Invalid Passkey format.");
+                    return;
+                }
+            } else if (localIp) {
+                targetIp = localIp;
+            } else {
+                alert("Please fill in either the Local IP or an Online Passkey.");
+                return;
+            }
+
+            ws = new WebSocket(`ws://${targetIp}:8765`);
 
             ws.onopen = () => {
-                ws.send(JSON.stringify({ 
-                    type: "register",
-                    requested_player: parseInt(selectedPlayer)
-                }));
+                ws.send(JSON.stringify({ type: "register", requested_player: parseInt(selectedPlayer) }));
             };
 
             ws.onmessage = (event) => {
@@ -136,7 +145,7 @@
                     playerTag.innerText = "PLAYER 0" + msg.player_id;
                     requestWakeLock(); 
                 } else {
-                    alert("Error matching player slot: " + msg.message);
+                    alert("Error: " + msg.message);
                 }
             };
 
@@ -144,22 +153,18 @@
                 connScreen.style.display = "flex";
                 ctrlScreen.style.display = "none";
                 playerTag.innerText = "DISCONNECTED";
-                if(wakeLock !== null) {
-                    wakeLock.release();
-                    wakeLock = null;
-                }
+                if(wakeLock !== null) { wakeLock.release(); wakeLock = null; }
+            };
+            
+            ws.onerror = () => {
+                alert("Connection failed. If using a passkey, ensure the host has configured Port Forwarding on port 8765.");
             };
         }
 
-        // Input Dispatch Engine
         document.querySelectorAll('.btn').forEach(button => {
             const sendInput = (action) => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({
-                        type: "input",
-                        button: parseInt(button.dataset.id),
-                        action: action
-                    }));
+                    ws.send(JSON.stringify({ type: "input", button: parseInt(button.dataset.id), action: action }));
                 }
             };
             button.addEventListener('touchstart', (e) => { e.preventDefault(); sendInput('press'); });
