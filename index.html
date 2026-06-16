@@ -17,7 +17,8 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;
         }
         input, select { padding: 15px; margin: 8px; font-size: 16px; border-radius: 8px; border: 2px solid #444; background: #333; color: white; text-align: center; width: 240px;}
-        #connect-btn { background: #30d158; color: white; font-weight: bold; padding: 15px 30px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; margin-top: 15px; width: 240px;}
+        input { text-transform: uppercase; font-weight: bold; letter-spacing: 2px; }
+        #connect-btn { background: #0a84ff; color: white; font-weight: bold; padding: 15px 30px; font-size: 18px; border-radius: 8px; border: none; cursor: pointer; margin-top: 15px; width: 240px;}
         
         #controller-screen { 
             display: none; flex-direction: column; 
@@ -30,10 +31,8 @@
 
         #player-tag { position: absolute; top: 15px; left: 25px; color: #8e8e93; font-size: 14px; letter-spacing: 1px; }
 
-        /* Enhanced spacing layout and slightly adjusted proportions for clean gaps */
         .buzz-container { flex: 3; width: 100%; display: flex; justify-content: center; align-items: center; margin-top: 30px; }
         
-        /* Made Buzz Dome significantly larger (210px) */
         .buzz-dome {
             width: 250px; height: 250px; background: radial-gradient(circle at 50% 30%, #ff453a, #b30000);
             border-radius: 50%; border: 6px solid #111;
@@ -43,13 +42,11 @@
         }
         .buzz-dome:active { background: radial-gradient(circle at 50% 30%, #ff1a0a, #800000); transform: scale(0.96); box-shadow: 0 4px 5px rgba(0,0,0,0.5); }
 
-        /* Balanced container template to ensure perfectly uniform spacing gaps */
         .color-buttons-container { flex: 4; width: 100%; display: flex; flex-direction: column; justify-content: space-evenly; align-items: center; margin-bottom: 40px; }
         .rect-btn { width: 88%; height: 18%; border-radius: 15px; border: 5px solid #111; box-shadow: 0 5px 5px rgba(0,0,0,0.3), inset 0 3px 5px rgba(255,255,255,0.3); box-sizing: border-box; }
         .rect-btn:active { transform: scale(0.96); filter: brightness(0.8); }
 
         .blue   { background: linear-gradient(#0a84ff, #0040aa); }
-        /* True Deep Orange Overhaul */
         .orange { background: linear-gradient(#ff6600, #cc3300); } 
         .green  { background: linear-gradient(#30d158, #1a7a33); }
         .yellow { background: linear-gradient(#ffd60a, #b39500); }
@@ -59,9 +56,9 @@
 
     <div id="connection-screen">
         <h2 style="margin-bottom:5px;">Buzz! Wireless Link</h2>
-        <p style="color:#8e8e93; margin-top:0;">Connect via Local Network</p>
+        <p style="color:#8e8e93; margin-top:0;">Enter Password / Code to Join</p>
         
-        <input type="text" id="ip-input" placeholder="Enter PC IP (e.g. 192.168.1.5)">
+        <input type="text" id="code-input" placeholder="ENTER CODE">
         
         <select id="player-select">
             <option value="1">Player 1</option>
@@ -70,7 +67,7 @@
             <option value="4">Player 4</option>
         </select>
         
-        <button id="connect-btn" onclick="connectToServer()">Launch Controller</button>
+        <button id="connect-btn" onclick="connectToServer()">Join Game</button>
     </div>
 
     <div id="controller-screen">
@@ -97,12 +94,36 @@
             } catch (err) { console.log("WakeLock inactive:", err.message); }
         }
 
+        function decodeRoomCode(code) {
+            code = code.trim().toUpperCase();
+            if (!code) return null;
+            
+            // Decodes the base36 string password back into a large integer
+            let num = 0;
+            const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            for (let i = 0; i < code.length; i++) {
+                const current_char = code[i];
+                const val = chars.indexOf(current_char);
+                if (val === -1) return null; // Invalid character found
+                num = (num * 36) + val;
+            }
+            
+            // Unpack the large integer back into the standard 4-part IP syntax
+            const oct1 = (num >>> 24) & 255;
+            const oct2 = (num >>> 16) & 255;
+            const oct3 = (num >>> 8) & 255;
+            const oct4 = num & 255;
+            
+            return `${oct1}.${oct2}.${oct3}.${oct4}`;
+        }
+
         function connectToServer() {
-            const targetIp = document.getElementById('ip-input').value.trim();
+            const codeInput = document.getElementById('code-input').value;
             const selectedPlayer = document.getElementById('player-select').value;
             
+            const targetIp = decodeRoomCode(codeInput);
             if (!targetIp) {
-                alert("Please provide the Local PC IP address.");
+                alert("Invalid room code format.");
                 return;
             }
 
@@ -132,7 +153,7 @@
             };
             
             ws.onerror = () => {
-                alert("Connection failed. Ensure the Python Dashboard application is running on your PC and your phone is on the same Wi-Fi network.");
+                alert("Connection failed. Make sure your phone is connected to the same Wi-Fi network as your PC.");
             };
         }
 
@@ -144,7 +165,6 @@
             };
             button.addEventListener('touchstart', (e) => { 
                 e.preventDefault(); 
-                // Triggers a 30 millisecond haptic vibration click on press
                 if ('vibrate' in navigator) { navigator.vibrate(30); }
                 sendInput('press'); 
             });
